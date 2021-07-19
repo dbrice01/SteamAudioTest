@@ -1,0 +1,12 @@
+Controls:
+
+To move around:
+-Use mouse for looking, keyboard arrows for movement
+
+Boombox:
+-Hold B key down on keyboard for Boombox mode. In this mode hold X, Y or Z keys (individually) down (whilst still holding down B) and press arrow up or down keys to move the boombox on the selected axis
+
+Chamber Scale:
+- Hold S key down on keyboard for ChamberScale mode. Then hold X,Y or Z key and arrow up or arrow down to adjust the scale in the selected axis.
+
+     
