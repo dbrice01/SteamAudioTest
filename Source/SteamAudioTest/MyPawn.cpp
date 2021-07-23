@@ -2,6 +2,7 @@
 
 
 #include "MyPawn.h"
+#include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
 
 // Sets default values
@@ -9,92 +10,80 @@ AMyPawn::AMyPawn()
 {
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
 }
 
 // Called when the game starts or when spawned
 void AMyPawn::BeginPlay()
 {
 	Super::BeginPlay();
+	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString(TEXT("Welcome to Steam Audio Test")));
+	
 }
 
 // Called every frame
 void AMyPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	if (!isScaleMode)
+	FQuat QuatRotation;
+	FVector NewLocation;
+	FVector CurrentScale;
+	switch (Mode)
 	{
-		if (!isBoomboxMode) // Walking around
+	case 0: //Viewer mode
+		if (!MovementDirection.IsZero())
 		{
-			if (!MovementDirection.IsZero())
-			{
-				const FVector NewLocation = GetActorLocation() + (MovementDirection * DeltaTime * MovementSpeed);
-				AddActorLocalOffset((MovementDirection * DeltaTime * MovementSpeed));
-			}
-			FQuat QuatRotation = FQuat(FRotator(Pitch, Yaw, 0.0f));
-			AddActorLocalRotation(QuatRotation, false, 0, ETeleportType::None);
+			NewLocation = GetActorLocation() + (MovementDirection * DeltaTime * MovementSpeed);
+			AddActorLocalOffset((MovementDirection * DeltaTime * MovementSpeed));
 		}
-		else //Boombox Mode
+		QuatRotation = FQuat(FRotator(Pitch, Yaw, 0.0f));
+		AddActorLocalRotation(QuatRotation, false, 0, ETeleportType::None);
+		break;
+	case 1: //Scale mode
+		CurrentScale = Chamber->GetActorScale3D();
+		switch (Axis)
 		{
-			if (isXAxis)
-			{
-				Boombox->SetActorLocation(Boombox->GetActorLocation() + FVector(MovementDirection.X * BoomboxSpeed, 0, 0));
-			}
-			else if (isYAxis)
-			{
-				Boombox->SetActorLocation(Boombox->GetActorLocation() + FVector(0, MovementDirection.X * BoomboxSpeed, 0));
-			}
-			else if (isZAxis)
-			{
-				Boombox->SetActorLocation(Boombox->GetActorLocation() + FVector(0, 0, MovementDirection.X * BoomboxSpeed));
-			}
-		}
-	}
-	else //Scale Mode
-	{
-		FVector CurrentScale = Chamber->GetActorScale3D();
-		if (isXAxis)
-		{
-			Chamber->SetActorScale3D(CurrentScale + FVector(MovementDirection.X * ScaleSpeed , 0, 0));
-		}
-		else if (isYAxis)
-		{
-			Chamber->SetActorScale3D(CurrentScale + FVector( 0, MovementDirection.X * ScaleSpeed, 0));
-		}
-		else if (isZAxis)
-		{
+		case 0:
+			Chamber->SetActorScale3D(CurrentScale + FVector(MovementDirection.X * ScaleSpeed, 0, 0));
+			break;
+		case 1:
+			Chamber->SetActorScale3D(CurrentScale + FVector(0, MovementDirection.X * ScaleSpeed, 0));
+			break;
+		case 2:
 			Chamber->SetActorScale3D(CurrentScale + FVector(0, 0, MovementDirection.X * ScaleSpeed));
+			break;
+		default:
+			UE_LOG(LogTemp, Warning, TEXT("No Axis selected"));
 		}
-		else
+		break;
+	case 2: //Boombox mode
+		switch (Axis)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("In Scale Mode, no axis selected"));
+		case 0:
+			Boombox->SetActorLocation(Boombox->GetActorLocation() + FVector(MovementDirection.X * BoomboxSpeed, 0, 0));
+			break;
+		case 1:
+			Boombox->SetActorLocation(Boombox->GetActorLocation() + FVector(0, MovementDirection.X * BoomboxSpeed, 0));		
+			break;
+		case 2:
+			Boombox->SetActorLocation(Boombox->GetActorLocation() + FVector(0, 0, MovementDirection.X * BoomboxSpeed));			
+			break;
+		default:
+			UE_LOG(LogTemp, Warning, TEXT("No Axis is selected"));
 		}
+		break;
+	default:
+		UE_LOG(LogTemp, Warning, TEXT("Unknown case in Tick Switch"));
 	}
-
-
-	
-	//UE_LOG(LogTemp, Warning, TEXT("Pawn Rotation is %s"), *GetActorRotation().ToString());
-
 }
 
 // Called to bind functionality to input
 void AMyPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-	InputComponent->BindAction("ScaleMode", IE_Pressed, this, &AMyPawn::ScaleModeStart);
-	InputComponent->BindAction("ScaleMode", IE_Released, this, &AMyPawn::ScaleModeStop);
-	InputComponent->BindAction("BoomboxMode", IE_Pressed, this, &AMyPawn::BoomboxModeStart);
-	InputComponent->BindAction("BoomboxMode", IE_Released, this, &AMyPawn::BoomboxModeStop);
-	InputComponent->BindAction("isXAxis", IE_Pressed, this, &AMyPawn::XAxisStart);
-	InputComponent->BindAction("isXAxis", IE_Released, this, &AMyPawn::XAxisStop);
-	InputComponent->BindAction("isYAxis", IE_Pressed, this, &AMyPawn::YAxisStart);
-	InputComponent->BindAction("isYAxis", IE_Released, this, &AMyPawn::YAxisStop);
-	InputComponent->BindAction("isZAxis", IE_Pressed, this, &AMyPawn::ZAxisStart);
-	InputComponent->BindAction("isZAxis", IE_Released, this, &AMyPawn::ZAxisStop);
-
+	InputComponent->BindAction("ToggleMode", IE_Pressed, this, &AMyPawn::ToggleMode);
+	InputComponent->BindAction("ToggleAxis", IE_Pressed, this, &AMyPawn::ToggleAxis);
 	InputComponent->BindAxis("MoveForward", this, &AMyPawn::MoveForward);
 	InputComponent->BindAxis("MoveRight", this, &AMyPawn::MoveRight);
-
 	InputComponent->BindAxis("Rotate", this, &AMyPawn::Move_XAxis);
 	InputComponent->BindAxis("Lookup", this, &AMyPawn::Move_YAxis);
 
@@ -121,64 +110,56 @@ void AMyPawn::MoveRight(float AxisValue)
 	MovementDirection.Y = FMath::Clamp(AxisValue, -1.0f, 1.0f);	
 }
 
-void AMyPawn::ScaleModeStart()
+void AMyPawn::ToggleMode() 
 {
-	isScaleMode = true;
-	UE_LOG(LogTemp, Warning, TEXT("Starting ScaleMode"));
+	
+	switch (Mode)
+	{
+	case 0:
+		UE_LOG(LogTemp, Warning, TEXT("Switching to Scale Mode"));//Scale mode
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString(TEXT("Scale Mode Enabled")));
+		Mode++;
+		break;
+	case 1:
+		UE_LOG(LogTemp, Warning, TEXT("Switching to Boombox Mode"));//Boombox mode
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString(TEXT("Boombox Mode Enabled")));
+		Mode++;
+		break;
+	case 2:
+		UE_LOG(LogTemp, Warning, TEXT("Switching to Viewer Mode"));//Viewer mode
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString(TEXT("Viewer Mode Enabled")));
+		Mode = 0;
+		break;
+	default:
+		UE_LOG(LogTemp, Warning, TEXT("Unknown case in Toggle Mode switch"));
+	}
+	
 }
 
-void AMyPawn::ScaleModeStop()
-{
-	isScaleMode = false;
-	UE_LOG(LogTemp, Warning, TEXT("Stopping ScaleMode"));
+void AMyPawn::ToggleAxis()
+{	
+	switch (Axis)
+	{
+	case 0:
+		UE_LOG(LogTemp, Warning, TEXT("Selecting Y Axis "));//Y Axis
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString(TEXT("Y Axis selected")));
+		Axis++;
+		break;
+	case 1:
+		UE_LOG(LogTemp, Warning, TEXT("Selecting Z Axis"));//Z Axis
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString(TEXT("Z Axis selected")));
+		Axis++;
+		break;
+	case 2:
+		UE_LOG(LogTemp, Warning, TEXT("Selecting X Axis"));//X Axis
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString(TEXT("X Axis selected")));
+		Axis = 0;
+		break;
+	default:
+		UE_LOG(LogTemp, Warning, TEXT("Unknown case in Toggle Axis switch"));
+	}
+
 }
 
-void AMyPawn::BoomboxModeStart()
-{
-	isBoomboxMode = true;
-	UE_LOG(LogTemp, Warning, TEXT("Starting BoomboxMode"));
-}
-
-void AMyPawn::BoomboxModeStop()
-{
-	isBoomboxMode = false;
-	UE_LOG(LogTemp, Warning, TEXT("Stopping BoomboxMode"));
-}
-
-void AMyPawn::XAxisStart()
-{
-	isXAxis = true;
-	UE_LOG(LogTemp, Warning, TEXT("Stopping isXAxis"));
-}
-
-void AMyPawn::XAxisStop()
-{
-	isXAxis = false;
-	UE_LOG(LogTemp, Warning, TEXT("Starting isXAxis"));
-}
-
-void AMyPawn::YAxisStart()
-{
-	isYAxis = true;
-	UE_LOG(LogTemp, Warning, TEXT("Stopping isYAxis"));
-}
-
-void AMyPawn::YAxisStop()
-{
-	isYAxis = false;
-	UE_LOG(LogTemp, Warning, TEXT("Stopping isYAxis"));
-}
-
-void AMyPawn::ZAxisStart()
-{
-	isZAxis = true;
-	UE_LOG(LogTemp, Warning, TEXT("Starting isZAxis"));
-}
-
-void AMyPawn::ZAxisStop()
-{
-	isZAxis = false;
-	UE_LOG(LogTemp, Warning, TEXT("Stopping isZAxis"));
-}
 
 

@@ -31,6 +31,8 @@ public:
 	void Move_YAxis(float AxisValue);
 	void MoveRight(float AxisValue);
 	void MoveForward(float AxisValue);
+	void ToggleMode();
+	void ToggleAxis();
 	void ScaleModeStart();
 	void ScaleModeStop();
 	void BoomboxModeStart();
@@ -52,7 +54,8 @@ public:
 
 private:
 	FVector MovementDirection;
-
+	int Mode = 0;
+	int Axis = 0; 
 	UPROPERTY(EditAnywhere);
 	float MovementSpeed = 600.0f;
 
