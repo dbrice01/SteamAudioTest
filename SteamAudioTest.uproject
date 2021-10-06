@@ -22,5 +22,8 @@
 			"Name": "SteamAudio",
 			"Enabled": true
 		}
+	],
+	"TargetPlatforms": [
+		"WindowsNoEditor"
 	]
 }
